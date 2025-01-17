@@ -23,6 +23,6 @@ def home(request):
 
 urlpatterns = [
     path('', home),
-    path('api/', include('wallets.urls')),
+    path('', include('wallets.urls')),  # Убедитесь, что здесь пустой префикс, так как 'api/v1/' уже включён в wallets.urls
     path('admin/', admin.site.urls),
 ]

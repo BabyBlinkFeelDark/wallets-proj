@@ -145,3 +145,9 @@ class TestWalletViews:
         response = api_client.post(url, data, format='json')
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data.get('error') == "Wallet not found"
+
+        def test_create_wallet_operation_invalid_json(api_client, wallet):
+            url = reverse('wallet-operation', kwargs={'wallet_uuid': str(wallet.id)})
+            data = "invalid_json"
+            response = api_client.post(url, data, content_type='application/json')
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
