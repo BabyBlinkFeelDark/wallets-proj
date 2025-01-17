@@ -6,6 +6,7 @@ import uuid
 class Wallet(models.Model):
     id = models.UUIDField(primary_key=True, default= uuid.uuid4, editable=False)
     balance = models.DecimalField(max_digits=20, decimal_places=2,default=0)
+
     def __str__(self):
         return str(self.id)
 
@@ -18,5 +19,6 @@ class WalletOperation(models.Model):
     operation_type = models.CharField(max_length=10, choices=OPERATION_TYPE_CHOICES)
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
+
     def __str__(self):
         return f"{self.operation_type} of {self.amount} to wallet {self.wallet.id}"
