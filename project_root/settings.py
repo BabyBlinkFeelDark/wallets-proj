@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -86,8 +87,24 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': 'pgbouncer',
         'PORT': 6432,
+        'TEST': {
+            'NAME': "wallets_db",
+            'HOST': 'db',
+            'PORT': 5432,
+        },
     }
 }
+
+if os.getenv('TEST_ENV') == 'true':
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME') + '_test',  # имя базы данных для тестов
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': 'test_db',  # сервис тестовой БД
+        'PORT': 5432,  # порт контейнера для тестов
+    }
+
 
 
 # Password validation
