@@ -3,7 +3,10 @@ version: '3.9'
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: [ "./wait-for-it.sh", "pgbouncer:6432", "--", "sh", "-c",
+      "python manage.py migrate && gunicorn project_root.wsgi:application \
+              --workers 12 --threads 4 --worker-class gevent --bind 0.0.0.0:8000",
+    "python manage.py migrate --settings=project_root.settings.test && pytest --settings=project_root.settings.test"]
     ports:
       - "8000:8000"
     volumes:
@@ -11,7 +14,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      - pgbouncer
+    networks:
+      - app_network
+    restart: unless-stopped
 
   db:
     image: postgres:15
@@ -20,4 +26,54 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
+      - "5432:5432"
+    networks:
+      - app_network
+
+  test_db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${DB_NAME}_test
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
       - "5433:5432"
+    networks:
+      - app_network
+
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    ports:
+      - "6432:6432"
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    networks:
+      - app_network
+    volumes:
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./userlist.txt:/etc/pgbouncer/userlist.txt
+
+  locust:
+    image: python:3.10
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["./wait-for-it.sh", "web:8000", "--", "sh", "-c", "pip install -r requirements.txt && locust -f locust/locustfile.py --host=http://web:8000"]
+    ports:
+      - "8089:8089"
+    depends_on:
+      - web
+    networks:
+      - app_network
+    restart: unless-stopped
+
+networks:
+  app_network:
+    driver: bridge
+
