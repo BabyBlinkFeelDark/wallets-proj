@@ -21,41 +21,45 @@ class WalletDetail(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['POST'])
 def create_wallet_operation(request, wallet_uuid):
-    # Преобразование wallet_uuid в объект UUID
-    if not isinstance(wallet_uuid, uuid.UUID):
-        try:
-            wallet_uuid = uuid.UUID(wallet_uuid)
-        except ValueError:
-            return Response({'error': 'Invalid wallet UUID'}, status=status.HTTP_400_BAD_REQUEST)
-
     try:
         with transaction.atomic():
-            # Получение кошелька с блокировкой на запись
             wallet = Wallet.objects.select_for_update().get(id=wallet_uuid)
-
-            # Валидация данных операции
             serializer = WalletOperationSerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if serializer.is_valid():
+                operation_type = serializer.validated_data['operation_type']
+                amount = serializer.validated_data['amount']
 
-            operation_type = serializer.validated_data['operation_type']
-            amount = serializer.validated_data['amount']
+                if operation_type == 'WITHDRAW' and wallet.balance < amount:
+                    return Response({'error': 'Insufficient funds'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Логика операций
-            if operation_type == 'WITHDRAW' and wallet.balance < amount:
-                return Response({'error': 'Insufficient funds'}, status=status.HTTP_400_BAD_REQUEST)
+                if operation_type == 'DEPOSIT':
+                    wallet.balance += amount
+                elif operation_type == 'WITHDRAW':
+                    wallet.balance -= amount
 
-            if operation_type == 'DEPOSIT':
-                wallet.balance += amount
-            elif operation_type == 'WITHDRAW':
-                wallet.balance -= amount
+                wallet.save()
 
-            wallet.save()
+                WalletOperation.objects.create(
+                    wallet=wallet,
+                    operation_type=operation_type,
+                    amount=amount
+                )
 
-            # Сохранение операции
-            WalletOperation.objects.create(wallet=wallet, operation_type=operation_type, amount=amount)
-
-            return Response({'balance': wallet.balance}, status=status.HTTP_201_CREATED)
-
+                return Response({'balance': wallet.balance}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Wallet.DoesNotExist:
         return Response({'error': 'Wallet not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WalletBalanceDetail(generics.RetrieveAPIView):
+    queryset = Wallet.objects.all()
+    serializer_class = WalletBalanceSerializer
+
+    def get_object(self):
+        wallet_uuid = self.kwargs['wallet_uuid']
+        try:
+            return Wallet.objects.get(id=wallet_uuid)
+        except Wallet.DoesNotExist:
+            raise Http404
