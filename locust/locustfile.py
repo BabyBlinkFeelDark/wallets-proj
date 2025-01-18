@@ -46,6 +46,6 @@ class WalletUser(HttpUser):
     @task(10)
     def get_balance(self):
         if self.wallet_id:
-            response = self.client.get(f"/api/v1/wallets/{self.wallet_id}/balance/")
+            response = self.client.get(f"/api/v1/wallets/{self.wallet_id}/")
             if response.status_code != 200:
                 logging.error(f"Ошибка при запросе баланса: {response.status_code}")

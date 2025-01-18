@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Wallet, WalletOperation
 
+
 class WalletSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Wallet.
@@ -12,9 +13,10 @@ class WalletSerializer(serializers.ModelSerializer):
         model (class): Модель, к которой применяется сериализатор.
         fields (str or list): Список полей, которые будут включены в сериализацию.
     """
+
     class Meta:
         model = Wallet
-        fields = '__all__'
+        fields = "__all__"
 
 
 class WalletOperationSerializer(serializers.Serializer):
@@ -23,7 +25,10 @@ class WalletOperationSerializer(serializers.Serializer):
 
     Этот сериализатор используется для валидации данных о типе операции и сумме.
     """
-    operation_type = serializers.ChoiceField(choices=[('DEPOSIT', 'DEPOSIT'), ('WITHDRAW', 'WITHDRAW')])
+
+    operation_type = serializers.ChoiceField(
+        choices=[("DEPOSIT", "DEPOSIT"), ("WITHDRAW", "WITHDRAW")]
+    )
     amount = serializers.DecimalField(max_digits=20, decimal_places=2)
 
     def validate_amount(self, value):
@@ -38,7 +43,7 @@ class WalletOperationSerializer(serializers.Serializer):
         """
         Валидация типа операции.
         """
-        if value not in ['DEPOSIT', 'WITHDRAW']:
+        if value not in ["DEPOSIT", "WITHDRAW"]:
             raise serializers.ValidationError("Invalid operation type.")
         return value
 
@@ -49,6 +54,7 @@ class WalletBalanceSerializer(serializers.ModelSerializer):
 
     Этот сериализатор используется для отображения текущего баланса кошелька.
     """
+
     class Meta:
         model = Wallet
-        fields = ['id', 'balance']
+        fields = ["id", "balance"]
